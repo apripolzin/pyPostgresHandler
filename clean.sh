@@ -1,4 +1,4 @@
 #!/bin/bash
 
 #remove all gitignored
-rm -rf $(cat .gitignore)
+rm -rf $(cat toclean.txt)
