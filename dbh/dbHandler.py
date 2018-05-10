@@ -255,7 +255,7 @@ class DbHandler:
             raise Exception(str(e))
         return
 
-def readConfig(section='postgresql', filename='/opt/sccregserver/etc/db_connection.conf'):
+def readConfig(section='postgresql', filename='/opt/ankf/etc/db_connection.conf'):
     parser = ConfigParser()
     parser.read(filename)
     result = {}
@@ -278,21 +278,15 @@ def get_db_connection():
         raise Exception("Config not found aborting")
         return None
 
-    # print('Connecting to the PostgreSQL database...')
     conn = psycopg2.connect(**params)
     cur = conn.cursor()
     cur.execute('SELECT version()')
     db_version = cur.fetchone()[0]
-    # print(db_version)
     cur.close()
-    # print("Connection OK")
     return conn
 
 def main():
     h = DbHandler()
-    #h.insert_into('templates', {'template_regexp': 'my cool template_',})
-    sel = h.select_from_where('templates')
-    print(sel)
 
 if __name__ == '__main__':
     main()
