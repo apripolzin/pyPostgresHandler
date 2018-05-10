@@ -173,11 +173,12 @@ class DbHandler:
         if columns == '*':
             columns = self.get_columns_by_table_name(table_name)
 
-        id_name = self.get_columns_by_table_name(table_name)[0]
+        id_name = '"' + self.get_columns_by_table_name(table_name)[0] + '"'
 
         i = 0
         columns_str = ''
         for col in columns:
+            col = '"'+col+'"'
             i += 1
             if i >= len(columns):
                 col += ' '
@@ -284,9 +285,3 @@ def get_db_connection():
     db_version = cur.fetchone()[0]
     cur.close()
     return conn
-
-def main():
-    h = DbHandler()
-
-if __name__ == '__main__':
-    main()
