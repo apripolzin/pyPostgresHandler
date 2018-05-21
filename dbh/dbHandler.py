@@ -207,9 +207,9 @@ class DbHandler:
                     AND = ' AND '
 
                 if where[key] is None:
-                    where_str += (key + " IS NULL " + AND)
+                    where_str += ('"' + key + '"' + " IS NULL " + AND)
                 else:
-                    where_str += (key + " = (%s) " + AND)
+                    where_str += ('"' + key + '"' + " = (%s) " + AND)
 
         order_by_str = ' ORDER BY {}'.format(id_name)
         if not order_by_id:
@@ -256,6 +256,24 @@ class DbHandler:
             raise Exception(str(e))
         return
 
+    def get_first_id_by_table_name(self, table_name: str):
+        return self.get_last_id_by_table_name(table_name, last=False)
+
+    def get_last_id_by_table_name(self, table_name: str, last=True):
+        id_name = '"' + self.get_columns_by_table_name(table_name)[0] + '"'
+        try:
+            cur = self.connection.cursor()
+            cur.execute("SELECT {id_name} FROM {table_name} ORDER BY id {desc} limit 1".format(id_name=id_name, table_name=table_name, desc="DESC" if last else ""))
+            res = cur.fetchone()
+            self.connection.commit()
+            cur.close()
+            return res[0]
+        except (Exception, psycopg2.DatabaseError) as e:
+            self.connection.commit()
+            cur.close()
+            raise e
+
+
 def readConfig(section='postgresql', filename='/opt/ankf/etc/db_connection.conf'):
     parser = ConfigParser()
     parser.read(filename)
@@ -281,7 +299,5 @@ def get_db_connection():
 
     conn = psycopg2.connect(**params)
     cur = conn.cursor()
-    cur.execute('SELECT version()')
-    db_version = cur.fetchone()[0]
     cur.close()
     return conn
