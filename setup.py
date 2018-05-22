@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 from setuptools import setup
 
 setup(
@@ -12,3 +10,5 @@ setup(
     install_requires=["psycopg2", ],
     data_files=[('/opt/ankf/etc/', ['opt/ankf/etc/db_connection.conf', ]), ]
 )
+
+

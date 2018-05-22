@@ -256,10 +256,10 @@ class DbHandler:
             raise Exception(str(e))
         return
 
-    def get_first_id_by_table_name(self, table_name: str):
+    def get_first_id_by_table_name(self, table_name):
         return self.get_last_id_by_table_name(table_name, last=False)
 
-    def get_last_id_by_table_name(self, table_name: str, last=True):
+    def get_last_id_by_table_name(self, table_name, last=True):
         id_name = '"' + self.get_columns_by_table_name(table_name)[0] + '"'
         try:
             cur = self.connection.cursor()

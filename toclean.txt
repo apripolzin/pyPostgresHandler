@@ -1,3 +1,5 @@
 build/
 dbh.egg-info/
 dist/
+dbh/*.pyc
+dbh/__pycache__
