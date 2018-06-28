@@ -29,7 +29,7 @@ class DbHandler:
         i = 1
 
         for column in set:
-            set_string += " {col}=%s ".format(col=column)
+            set_string += ' "{col}"=%s '.format(col=column)
             values.append(set[column])
             if i < len(set.keys()):
                 set_string += ', '
@@ -39,7 +39,7 @@ class DbHandler:
 
         i = 1
         for column in where:
-            where_string += " {col}=%s ".format(col=column)
+            where_string += ' "{col}"=%s '.format(col=column)
             values.append(where[column])
             if i < len(where.keys()):
                 where_string += ' AND '
@@ -72,6 +72,7 @@ class DbHandler:
 
         i = 1
         for column in columns_values:
+            column = '"' + column + '"'
             str_columns += column + '=%s '
             values.append(columns_values[column])
             if i < len(columns_values):
@@ -109,7 +110,7 @@ class DbHandler:
         values = []
         i = 1
         for column in columns_and_values:
-            str_columns += column
+            str_columns += '"' + column + '"'
             str_values += '%s'
             values.append(columns_and_values[column])
             if i < len(columns_and_values.keys()):
