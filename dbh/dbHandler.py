@@ -199,6 +199,8 @@ class DbHandler:
                 if where[key] is None:
                     #Not add None arg to pass to request
                     pass
+                elif isinstance(where[key], tuple) or isinstance(where[key], list):
+                    args.append(where[key][1])
                 else:
                     args.append(where[key])
                 i += 1
@@ -208,6 +210,8 @@ class DbHandler:
 
                 if where[key] is None:
                     where_str += ('"' + key + '"' + " IS NULL " + AND)
+                elif isinstance(where[key], tuple):
+                    where_str += ('"' + key + '"' + " {sign} (%s) ".format(sign=where[key][0]) + AND)
                 else:
                     where_str += ('"' + key + '"' + " = (%s) " + AND)
 
@@ -238,6 +242,7 @@ class DbHandler:
         return result
 
     select_from_where = getDataFromTable
+
 
     def executeSql(self, command):
         """
