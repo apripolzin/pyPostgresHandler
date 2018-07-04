@@ -35,67 +35,52 @@ class DbHandler:
                 set_string += ', '
             i += 1
 
-        where_string = ''
+        where_string, where_values = self.compile_where_string(where)
+        values.extend(where_values)
 
-        i = 1
-        for column in where:
-            where_string += ' "{col}"=%s '.format(col=column)
-            values.append(where[column])
-            if i < len(where.keys()):
-                where_string += ' AND '
-            i += 1
-
-        command = "UPDATE {table_name} SET {set_string} WHERE {where_string};".format(table_name=table, set_string=set_string, where_string=where_string)
+        command = "UPDATE {table_name} SET {set_string} {where_string};".format(table_name=table, set_string=set_string, where_string=where_string)
 
         try:
             cur = self.connection.cursor()
             cur.execute(command, values)
             rowcount = cur.rowcount
+        finally:
             self.connection.commit()
             cur.close()
-        except (Exception, psycopg2.DatabaseError) as e:
-            self.connection.commit()
-            cur.close()
-            raise Exception(str(e))
 
         return rowcount
 
-    def delete_from_where(self, table, columns_values={}):
+    def delete_from_where(self, table, where={}):
         '''
         Api for database communication
         :param table: table_name
         :param columns_values: dict what rows to delete
-        :return: deleted id
+        :return: deleted rows
         '''
-        str_columns = ''
-        values = []
 
-        i = 1
-        for column in columns_values:
-            column = '"' + column + '"'
-            str_columns += column + '=%s '
-            values.append(columns_values[column])
-            if i < len(columns_values):
-                str_columns += 'AND '
-            i += 1
+        str_columns, values = self.compile_where_string(where)
 
         command = '''
-        DELETE FROM {table} WHERE {columns} RETURNING *;
+        DELETE FROM {table} {columns} RETURNING *;
         '''.format(table=table, columns=str_columns)
-        id = None
+
         try:
             cur = self.connection.cursor()
             cur.execute(command, values)
-            result = cur.fetchone()
-            if result:
-                id = result[0]
+            result = []
+            columns = self.get_columns_by_table_name(table)
+            for res in cur.fetchall():
+                row = {}
+                i = 0
+                for col in columns:
+                    row[col] = res[i]
+                    i += 1
+                result.append(row)
+        finally:
             self.connection.commit()
             cur.close()
-        except (Exception, psycopg2.DatabaseError) as e:
-            self.connection.commit()
-            cur.close()
-            raise Exception(str(e))
-        return id
+
+        return result
 
     def insert_into(self, table='', columns_and_values={}):
         '''
@@ -127,15 +112,11 @@ class DbHandler:
             cur = self.connection.cursor()
             cur.execute(command, values)
             id = cur.fetchone()[0]
+        finally:
             self.connection.commit()
             cur.close()
-        except (Exception, psycopg2.DatabaseError) as e:
-            self.connection.commit()
-            cur.close()
-            raise Exception(str(e))
-            return None
-        return id
 
+        return id
 
     def get_columns_by_table_name(self, table_name):
         '''
@@ -152,16 +133,47 @@ class DbHandler:
             cur.execute(command, (table_name, ))
             for col in cur.fetchall():
                 result.append(col[0])
+        finally:
             self.connection.commit()
             cur.close()
-        except (Exception, psycopg2.DatabaseError) as e:
-            self.connection.commit()
-            cur.close()
-            raise Exception(str(e))
 
         return result
 
-    def getDataFromTable(self, table_name, columns='*', where={}, order_by_id=True):
+    @staticmethod
+    def compile_where_string(where={}):
+        args = []
+        where_str = ''
+        if not where:
+            return where_str, args
+        else:
+            args = []
+            where_str = ' WHERE '
+            i = 0
+            for key in where:
+                if where[key] is None:
+                    # Not add None arg to pass to request
+                    pass
+                elif isinstance(where[key], tuple) or isinstance(where[key], list):
+                    args.append(where[key][1])
+                else:
+                    args.append(where[key])
+                i += 1
+                AND = ''
+                if i < len(where):
+                    AND = ' AND '
+
+                if where[key] is None:
+                    where_str += ('"' + key + '"' + " IS NULL " + AND)
+                elif isinstance(where[key], tuple):
+                    where_str += ('"' + key + '"' + " {sign} (%s) ".format(sign=where[key][0]) + AND)
+                else:
+                    where_str += ('"' + key + '"' + " = (%s) " + AND)
+
+        return where_str, args
+
+
+
+    def getDataFromTable(self, table_name, columns='*', where={}, order_by_id=True, limit=1000, select_count_of=False):
         '''
         Returns table data by list of dicts
         :param table_name: table name
@@ -188,43 +200,34 @@ class DbHandler:
 
         result = []
 
-        args = None
-        if not where:
-            where_str = ''
-        else:
-            args = []
-            where_str = ' WHERE '
-            i = 0
-            for key in where:
-                if where[key] is None:
-                    #Not add None arg to pass to request
-                    pass
-                elif isinstance(where[key], tuple) or isinstance(where[key], list):
-                    args.append(where[key][1])
-                else:
-                    args.append(where[key])
-                i += 1
-                AND = ''
-                if i < len(where):
-                    AND = ' AND '
-
-                if where[key] is None:
-                    where_str += ('"' + key + '"' + " IS NULL " + AND)
-                elif isinstance(where[key], tuple):
-                    where_str += ('"' + key + '"' + " {sign} (%s) ".format(sign=where[key][0]) + AND)
-                else:
-                    where_str += ('"' + key + '"' + " = (%s) " + AND)
+        where_str, args = self.compile_where_string(where)
 
         order_by_str = ' ORDER BY {}'.format(id_name)
         if not order_by_id:
             order_by_str = ''
 
-        command = "SELECT {columns_str} FROM {table_name} {where_str} {order_by_str};".format(
-            columns_str=columns_str, table_name=table_name, where_str=where_str, order_by_str=order_by_str)
+        limit_str = ' LIMIT {}'.format(str(limit))
+        if not limit:
+            limit_str = ''
+
+        what_to_select_str = 'SELECT {columns_str} '.format(columns_str=columns_str)
+        if select_count_of:
+            what_to_select_str = 'SELECT count(*) '
+            order_by_str = ''
+            limit_str = ''
+
+        command = "{what_to_select_str} FROM {table_name} {where_str} {order_by_str} {limit_str};".format(
+            what_to_select_str=what_to_select_str, table_name=table_name, where_str=where_str, order_by_str=order_by_str, limit_str=limit_str)
 
         try:
             cur = self.connection.cursor()
             cur.execute(command, args)
+
+            if select_count_of:
+                res = cur.fetchone()[0]
+                cur.close()
+                return res
+
             for res in cur.fetchall():
                 r = {}
                 i = 0
@@ -233,15 +236,16 @@ class DbHandler:
                     i += 1
                 result.append(r)
             cur.close()
-        except (Exception, psycopg2.DatabaseError) as e:
+        finally:
             self.connection.commit()
             cur.close()
-            raise Exception(str(e))
-            return []
 
         return result
 
     select_from_where = getDataFromTable
+
+    def select_count_of(self, table_name='', where={}):
+        return self.select_from_where(table_name, where=where, select_count_of=True)
 
 
     def executeSql(self, command):
@@ -268,15 +272,12 @@ class DbHandler:
         id_name = '"' + self.get_columns_by_table_name(table_name)[0] + '"'
         try:
             cur = self.connection.cursor()
-            cur.execute("SELECT {id_name} FROM {table_name} ORDER BY id {desc} limit 1".format(id_name=id_name, table_name=table_name, desc="DESC" if last else ""))
-            res = cur.fetchone()
+            cur.execute("SELECT {id_name} FROM {table_name} ORDER BY {id_name} {desc} limit 1".format(id_name=id_name, table_name=table_name, desc="DESC" if last else ""))
+            res = cur.fetchone()[0]
+        finally:
             self.connection.commit()
             cur.close()
-            return res[0]
-        except (Exception, psycopg2.DatabaseError) as e:
-            self.connection.commit()
-            cur.close()
-            raise e
+        return res
 
 
 def readConfig(section='postgresql', filename='/opt/ankf/etc/db_connection.conf'):
@@ -300,7 +301,6 @@ def get_db_connection():
     params = DB_CONFIG
     if not params:
         raise Exception("Config not found aborting")
-        return None
 
     conn = psycopg2.connect(**params)
     cur = conn.cursor()
