@@ -3,5 +3,7 @@ dbh.egg-info/
 dist/
 .idea
 __pycache__
-test.py
 dbh/*.pyc
+files.txt
+files3.txt
+
