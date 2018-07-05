@@ -12,7 +12,6 @@ class DbHandler:
 
     def __del__(self):
         if self.connection:
-            # print("Closing connection...")
             self.connection.commit()
             self.connection.close()
 
@@ -266,13 +265,10 @@ class DbHandler:
         try:
             cur = self.connection.cursor()
             cur.execute(command)
+        finally:
             self.connection.commit()
             cur.close()
-        except (Exception, psycopg2.DatabaseError) as e:
-            self.connection.commit()
-            cur.close()
-            raise Exception(str(e))
-        return
+
 
     def get_first_id_by_table_name(self, table_name):
         return self.get_last_id_by_table_name(table_name, last=False)
