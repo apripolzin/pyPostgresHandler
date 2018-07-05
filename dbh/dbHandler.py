@@ -173,7 +173,7 @@ class DbHandler:
 
 
 
-    def getDataFromTable(self, table_name, columns='*', where={}, order_by_id=True, limit=1000, select_count_of=False):
+    def getDataFromTable(self, table_name, columns='*', where={}, order_by='id', limit=1000, desc=False, select_count_of=False):
         '''
         Returns table data by list of dicts
         :param table_name: table name
@@ -202,9 +202,18 @@ class DbHandler:
 
         where_str, args = self.compile_where_string(where)
 
-        order_by_str = ' ORDER BY {}'.format(id_name)
-        if not order_by_id:
+        #compile order by string
+        order_by_str = ''
+        if order_by == 'id':
+            order_by_str = ' ORDER BY {}'.format(id_name)
+        elif order_by:
+            order_by_str = ' ORDER BY "{}"'.format(order_by)
+        elif not order_by:
             order_by_str = ''
+
+        desc_str = ''
+        if desc:
+            desc_str = ' DESC '
 
         limit_str = ' LIMIT {}'.format(str(limit))
         if not limit:
@@ -216,8 +225,8 @@ class DbHandler:
             order_by_str = ''
             limit_str = ''
 
-        command = "{what_to_select_str} FROM {table_name} {where_str} {order_by_str} {limit_str};".format(
-            what_to_select_str=what_to_select_str, table_name=table_name, where_str=where_str, order_by_str=order_by_str, limit_str=limit_str)
+        command = "{what_to_select_str} FROM {table_name} {where_str} {order_by_str} {desc_str} {limit_str};".format(
+            what_to_select_str=what_to_select_str, table_name=table_name, where_str=where_str, order_by_str=order_by_str, desc_str=desc_str, limit_str=limit_str)
 
         try:
             cur = self.connection.cursor()
