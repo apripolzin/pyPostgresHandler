@@ -285,7 +285,7 @@ class DbHandler:
         return res
 
 
-def readConfig(section='postgresql', filename='/opt/ankf/etc/db_connection.conf'):
+def readConfig(section='postgresql', filename='/etc/dbh/db_connection.conf'):
     parser = ConfigParser()
     parser.read(filename)
     result = {}
