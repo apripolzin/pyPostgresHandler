@@ -8,7 +8,7 @@ setup(
     description='Simple postgres database handler',
     long_description='Simple postgres database handler',
     install_requires=["psycopg2", ],
-    data_files=[('/opt/ankf/etc/', ['opt/ankf/etc/db_connection.conf', ]), ]
+    data_files=[('/etc/dbh/', ['etc/dbh/db_connection.conf', ]), ]
 )
 
 
